@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // -----                                                                   -----
-// -----                            R3BLandRawAna                          -----
+// -----                            R3BNeulandMappedHist                   -----
 // -----                      Created  @ 01.2014 by M.I. Cherciu           -----
 // -----                                                                   -----
 // -----------------------------------------------------------------------------
@@ -19,7 +19,7 @@ class R3BNeulandMappedHist : public FairTask
 {
   public:
     R3BNeulandMappedHist();
-    R3BNeulandMappedHist(const char* name, Int_t iVerbose);
+    R3BNeulandMappedHist(const char* name, Int_t iVerbose = 1);
     virtual ~R3BNeulandMappedHist();
 
     virtual InitStatus Init();

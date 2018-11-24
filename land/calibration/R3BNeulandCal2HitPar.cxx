@@ -93,7 +93,7 @@ bool n_calib_mean::analyse_history(ident_no_set& bad_fit_idents) {
    return true;
 }
 
-bool n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[2], Double_t dydx[2]) {
+Bool_t n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[3], Double_t dydx[2]) {
    TF1 fit = TF1("linear_fit", "[1]*x+[0]");
    TGraph plot;
    Int_t n = 0;
@@ -106,20 +106,30 @@ bool n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[2], Dou
    if(n < 1000){
       y0[0] = NAN;
       y0[1] = NAN;
+      y0[2] = NAN;
       dydx[0] = NAN;
       dydx[1] = NAN;
    
       return false;   
    }
    
-   plot.Fit(&fit, "q");
-   y0[0] = fit.GetParameter(0);
-   y0[1] = fit.GetParError(0);
-   dydx[0] = fit.GetParameter(1);
-   dydx[1] = fit.GetParError(1);
+  plot.Fit(&fit, "q");
+  y0[0] = fit.GetParameter(0);
+  y0[1] = fit.GetParError(0);
+  dydx[0] = fit.GetParameter(1);
+  dydx[1] = fit.GetParError(1);
 
-   return true;
-}
+  TH1F* resolution = new TH1F("resolution", "resolution", 1000, -50, 50);
+  
+  for (UInt_t k = 0; k < _data.size(); k++)
+    if (bad_fit_idents.find(_data[k]._ident_no) == bad_fit_idents.end()){
+      resolution->Fill(_data[k]._pos_diff - _data[k]._pos_track*dydx[0]);
+    }
+  
+  resolution->Draw("colz");
+  y0[2] = resolution->GetStdDev();
+  return true;
+} 
 
 bool n_calib_diff::analyse_history(ident_no_set& bad_fit_idents) {
    {
@@ -309,13 +319,15 @@ InitStatus R3BNeulandCal2HitPar::Init() {
 }
 
 void R3BNeulandCal2HitPar::Exec(Option_t* option) {
-   if (++fEventNumber % 100000 == 0)
-      FairLogger::GetLogger()->Info(MESSAGE_ORIGIN, "R3BNeulandCal2HitPar::Exec : Event: %8d,    accepted Events: %8d", fEventNumber, nData);
-
+  if (++fEventNumber % 100000 == 0){
+    char output[128];
+    sprintf(output, "R3BNeulandCal2HitPar::Exec : Event: %8d,    accepted Events: %8d", fEventNumber, nData);
+    LOG(INFO) << "\r" << output << FairLogger::flush;
+  }
    Int_t nItems = fLandPmt->GetEntriesFast();
    
    if (nItems < 12) {
-      LOG(DEBUG) << "Event cannot be used: too few hits!" << FairLogger::endl;
+      LOG(DEBUG) << "Event cannot be used: too few hits : " << nItems << "!" << FairLogger::endl;
       return;
    }
    
@@ -349,8 +361,8 @@ void R3BNeulandCal2HitPar::Exec(Option_t* option) {
 	hm[pl] |= ULong_t (1) << pdl;
     }
 
-    if (items < 6) {
-      LOG(DEBUG) << "Event cannot be used: too few hits!" << FairLogger::endl;
+    if (items < 4) {
+      LOG(DEBUG) << "Event cannot be used: too few hits : " << items << "!" << FairLogger::endl;
       return;
     } 
   }
@@ -475,12 +487,12 @@ void R3BNeulandCal2HitPar::Exec(Option_t* option) {
                   y_plot->SetPoint(n_y++, pl + 0.5, pdl + 0.5);
             }
 
-      if (x_plot->GetN() < 3) {
+      if (x_plot->GetN() < 2) {
          LOG(DEBUG) << "failed: checking impossible, abort (rather have fewer, than bad ones!)" << FairLogger::endl;
          return;
       }
 
-      if (y_plot->GetN() < 3) {
+      if (y_plot->GetN() < 2) {
          LOG(DEBUG) << "failed: checking impossible, abort (rather have fewer, than bad ones!)" << FairLogger::endl;
          return;
       }
@@ -532,8 +544,8 @@ void R3BNeulandCal2HitPar::Exec(Option_t* option) {
        * fabs(dxdz*plane-x+x0) > VALUE*VALUE*(dxdz*dxdz+1)
        */
 
-      Double_t max_dist_scaled_x = 0.5 * sqrt(dxdz * dxdz + 1);
-      Double_t max_dist_scaled_y = 0.5 * sqrt(dydz * dydz + 1);
+      Double_t max_dist_scaled_x = 1.0 * sqrt(dxdz * dxdz + 1);
+      Double_t max_dist_scaled_y = 1.0 * sqrt(dydz * dydz + 1);
 
       Int_t bad_x = 0;
       Int_t bad_y = 0;        
@@ -902,7 +914,7 @@ void R3BNeulandCal2HitPar::FinishTask() {
 
    LOG(INFO) << "R3BNeulandCal2HitPar::FinishTask : " << "Collecting and fitting history: t-diff" << FairLogger::endl;
 
-   Double_t tdiff[fPlanes][fPaddles][2];
+   Double_t tdiff[fPlanes][fPaddles][3];
    Double_t invveff[fPlanes][fPaddles][2];
    
    for (Int_t pl = 0; pl < fPlanes; pl++)
@@ -1075,9 +1087,9 @@ void R3BNeulandCal2HitPar::FinishTask() {
             syncmodpar->SetEffectiveSpeedError(fabs(0.5 * invveff[pl][pdl][1] / (invveff[pl][pdl][0] * invveff[pl][pdl][0])));
             syncmodpar->SetEnergieGain(ecal[pl][pdl][pm]);	
             syncmodpar->SetEnergieGainError(ecalerr[pl][pdl][pm]);
-            FairLogger::GetLogger()->Info(MESSAGE_ORIGIN, "[%2d][%2d][%1d]: t = %8.3f ± %8.3f ± %8.3f        keV/QDC = %6.4f ± %6.4f",
+            FairLogger::GetLogger()->Info(MESSAGE_ORIGIN, "[%2d][%2d][%1d]: t = %8.3f ± %8.3f    keV/QDC = %6.4f ± %6.4f",
                                           pl + 1, pdl + 1, pm + 1, syncmodpar->GetTimeOffset(),
-                                          tdiff[pl][pdl][1], tsync[pl][pdl][1], syncmodpar->GetEnergieGain() * 1000,
+                                          tdiff[pl][pdl][2], syncmodpar->GetEnergieGain() * 1000,
                                           syncmodpar->GetEnergieGainError() * 1000);
             if (!TMath::IsNaN(syncmodpar->GetTimeOffset()) && !TMath::IsNaN(syncmodpar->GetEnergieGain())){
 	      fPar->AddModulePar(syncmodpar);

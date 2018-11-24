@@ -5,6 +5,8 @@
 Set(SYSTEM_INCLUDE_DIRECTORIES
 ${SYSTEM_INCLUDE_DIRECTORIES}
 ${BASE_INCLUDE_DIRECTORIES}
+${EPICS_INCLUDE_DIR}
+${EPICS_OS_INCLUDE_DIR}
 )
 
 set(INCLUDE_DIRECTORIES
@@ -25,7 +27,9 @@ ${R3BROOT_SOURCE_DIR}/r3bdata/losData
 ${R3BROOT_SOURCE_DIR}/r3bdata/trackerData
 ${R3BROOT_SOURCE_DIR}/tcal
 ${R3BROOT_SOURCE_DIR}/neuland/unpack
+${R3BROOT_SOURCE_DIR}/epics
 ${R3BROOT_SOURCE_DIR}/land/calibration
+${R3BROOT_SOURCE_DIR}/land/preexp
 )
 
 include_directories( ${INCLUDE_DIRECTORIES})
@@ -34,6 +38,7 @@ include_directories(SYSTEM ${SYSTEM_INCLUDE_DIRECTORIES})
 set(LINK_DIRECTORIES
 ${ROOT_LIBRARY_DIR}
 ${FAIRROOT_LIBRARY_DIR}
+${EPICS_LIBRARY_DIR}
 )
 
 link_directories( ${LINK_DIRECTORIES})
@@ -56,6 +61,9 @@ R3BNeutHit.cxx
 calibration/R3BNeulandMappedHist.cxx
 calibration/R3BNeulandMapped2CalPar.cxx
 calibration/R3BNeulandMapped2Cal.cxx
+calibration/R3BNeulandTacquilaMapped2CalPar.cxx
+calibration/R3BNeulandTacquilaMapped2QCalPar.cxx
+calibration/R3BNeulandTacquilaMapped2Cal.cxx
 calibration/R3BNeulandHitHist.cxx
 #calibration/R3BNeulandCalTest.cxx
 calibration/R3BNeulandHitPar.cxx
@@ -65,10 +73,12 @@ calibration/R3BLandCosmic1Util.cxx
 calibration/R3BNeulandParFact.cxx
 calibration/R3BNeulandCal2Hit.cxx
 calibration/R3BNeulandHitModulePar.cxx
-calibration/R3BNeulandMapped2QCalPar.cxx
 calibration/R3BNeulandQCalPar.cxx
 calibration/R3BNeulandHitFiller.cxx
 calibration/R3BNeulandQCalFiller.cxx
+preexp/R3BNeulandCheckMapping.cxx
+preexp/R3BNeulandGainMatching.cxx
+preexp/R3BNeulandTimeRes.cxx
 )
 
 # fill list of header files from list of source files
@@ -78,7 +88,7 @@ CHANGE_FILE_EXTENSION(*.cxx *.h HEADERS "${SRCS}")
 Set(LINKDEF LandLinkDef.h)
 Set(LIBRARY_NAME R3BLand)
 Set(DEPENDENCIES
-    R3Bbase R3BData R3BPassive R3BTCal)
+    R3Bbase R3BData R3BPassive R3BTCal R3BChannelAccess Spectrum)
 
 GENERATE_LIBRARY()
 
