@@ -67,6 +67,7 @@ R3BNeulandTacquilaReader.cxx
 R3BStrawtubesReader.cxx
 R3BStartrackReader.cxx
 R3BAmsReader.cxx
+R3BNeulandWRReader.cxx
 #R3BFib4Reader.cxx
 )
 
@@ -100,6 +101,7 @@ ext_h101_strawtubes.h
 ext_h101_star.h
 ext_h101_fibfour.h
 ext_h101_ams.h
+ext_h101_nn_wr.h
 )
 
 # fill list of header files from list of source files

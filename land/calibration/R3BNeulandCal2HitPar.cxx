@@ -53,7 +53,7 @@ const Double_t C_LIGHT = 29.9792458;                      // Speed of light [cm/
 // const Double_t paddle_spacing = 10.4;                 // cm LAND parameter
 const Double_t PADDLE_SPACING =  5.0;                 // cm NeuLAND parameter
 
-const Double_t MINIMUM_IONIZING = 1.15;
+const Double_t MINIMUM_IONIZING = 2.30;  // vadim 1.15 ???
 
 using namespace std;
 
@@ -103,7 +103,7 @@ Bool_t n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[3], D
          plot.SetPoint(n++, _data[k]._pos_track, _data[k]._pos_diff);
       }
       
-   if(n < 1000){
+   if(n < 1000){   // igor: it was 1000
       y0[0] = NAN;
       y0[1] = NAN;
       y0[2] = NAN;
@@ -119,7 +119,7 @@ Bool_t n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[3], D
   dydx[0] = fit.GetParameter(1);
   dydx[1] = fit.GetParError(1);
 
-  TH1F* resolution = new TH1F("resolution", "resolution", 1000, -50, 50);
+  /*TH1F* resolution = new TH1F("resolution", "resolution", 1000, -50, 50);
   
   for (UInt_t k = 0; k < _data.size(); k++)
     if (bad_fit_idents.find(_data[k]._ident_no) == bad_fit_idents.end()){
@@ -128,6 +128,7 @@ Bool_t n_calib_diff::calc_params(ident_no_set& bad_fit_idents, Double_t y0[3], D
   
   resolution->Draw("colz");
   y0[2] = resolution->GetStdDev();
+  */
   return true;
 } 
 
@@ -235,13 +236,15 @@ bool n_calib_diff::analyse_history(ident_no_set& bad_fit_idents) {
 R3BNeulandCal2HitPar::R3BNeulandCal2HitPar()
    : FairTask("R3BNeulandCal2HitPar")
    , fPar(NULL)
-   , fLandPmt(NULL) {
+   , fLandPmt(NULL)
+   , fMappedLos(NULL) {
 }
 
 R3BNeulandCal2HitPar::R3BNeulandCal2HitPar(const char* name, Int_t iVerbose)
    : FairTask(name, iVerbose)
    , fPar(NULL)
-   , fLandPmt(NULL) {
+   , fLandPmt(NULL)
+   , fMappedLos(NULL) {
 }
 
 R3BNeulandCal2HitPar::~R3BNeulandCal2HitPar() {
@@ -270,6 +273,13 @@ InitStatus R3BNeulandCal2HitPar::Init() {
    if (! fMan) {
       FairLogger::GetLogger()->Fatal(MESSAGE_ORIGIN, "FairRootManager not found");
       return kFATAL;
+   }
+
+   fMappedLos = (TClonesArray*) fMan->GetObject("LosMapped");
+
+   if (NULL == fMappedLos) {
+     FairLogger::GetLogger()->Fatal(MESSAGE_ORIGIN, "Branch LosMapped not found");
+     return kFATAL;
    }
 
    fLandPmt = (TClonesArray*) fMan->GetObject("NeulandCalData");
@@ -319,6 +329,9 @@ InitStatus R3BNeulandCal2HitPar::Init() {
 }
 
 void R3BNeulandCal2HitPar::Exec(Option_t* option) {
+
+  if (fMappedLos->GetEntriesFast()>0) return;
+
   if (++fEventNumber % 100000 == 0){
     char output[128];
     sprintf(output, "R3BNeulandCal2HitPar::Exec : Event: %8d,    accepted Events: %8d", fEventNumber, nData);
@@ -1010,7 +1023,7 @@ void R3BNeulandCal2HitPar::FinishTask() {
    for(Int_t pl = 0; pl < fPlanes; pl++)
      for(Int_t pdl = 0; pdl < fPaddles; pdl++){
        TH1F* histo = _ecalhistos[pl][pdl];
-       if(histo->GetEntries() < 1000){
+       if(histo->GetEntries() < 1000){  // igor: it was 1000
 	  ecal[pl][pdl][0] = NAN;
 	  ecal[pl][pdl][1] = NAN;
 	  ecalerr[pl][pdl][0] = NAN;

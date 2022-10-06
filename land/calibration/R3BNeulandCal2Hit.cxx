@@ -28,7 +28,7 @@ R3BNeulandCal2Hit::R3BNeulandCal2Hit()
    : fLandPmt (NULL)
    , fLandDigi (new TClonesArray ("R3BLandDigi"))
    , fNDigi (0)
-   , fFirstPlaneHorisontal (kFALSE) {
+   , fFirstPlaneHorizontal (kTRUE) {
 }
 
 R3BNeulandCal2Hit::R3BNeulandCal2Hit (const char* name, Int_t iVerbose)
@@ -36,7 +36,7 @@ R3BNeulandCal2Hit::R3BNeulandCal2Hit (const char* name, Int_t iVerbose)
    , fLandPmt (NULL)
    , fLandDigi (new TClonesArray ("R3BLandDigi"))
    , fNDigi (0)
-   , fFirstPlaneHorisontal (kFALSE) {
+   , fFirstPlaneHorizontal (kTRUE) {
 }
 
 R3BNeulandCal2Hit::~R3BNeulandCal2Hit() {
@@ -45,12 +45,14 @@ R3BNeulandCal2Hit::~R3BNeulandCal2Hit() {
 InitStatus R3BNeulandCal2Hit::Init() {
    FairRootManager* fMan = FairRootManager::Instance();
    if (!fMan) {
-      FairLogger::GetLogger()->Fatal (MESSAGE_ORIGIN, "FairRootManager not found");
+     //FairLogger::GetLogger()->Fatal (MESSAGE_ORIGIN, "FairRootManager not found");
+     LOG(ERROR) << "FairRootManager not found" << FairLogger::endl;
    }
 
    fLandPmt = (TClonesArray*) fMan->GetObject ("NeulandCalData");
    if (!fLandPmt) {
-      FairLogger::GetLogger()->Fatal (MESSAGE_ORIGIN, "NeulandCalData not found");
+     //FairLogger::GetLogger()->Fatal (MESSAGE_ORIGIN, "NeulandCalData not found");
+      LOG(ERROR) << "NeulandCalData not found" << FairLogger::endl;
    }
 
    fMan->Register ("LandDigi", "Land", fLandDigi, kTRUE);
@@ -62,8 +64,10 @@ InitStatus R3BNeulandCal2Hit::Init() {
 }
 
 void R3BNeulandCal2Hit::SetParContainers() {
-   FairRuntimeDb* rtdb = FairRunAna::Instance()->GetRuntimeDb();
-   fPar = (R3BNeulandHitPar*) rtdb->getContainer ("NeulandHitPar");
+  //FairRuntimeDb* rtdb = FairRunAna::Instance()->GetRuntimeDb();
+  //fPar = (R3BNeulandHitPar*) rtdb->getContainer ("NeulandHitPar");
+  
+   fPar = (R3BNeulandHitPar*)FairRuntimeDb::instance()->getContainer ("NeulandHitPar");
 }
 
 
@@ -79,7 +83,7 @@ void R3BNeulandCal2Hit::SetParameter(){
       Int_t id = fModulePar->GetModuleId() * 2 + fModulePar->GetSide() - 3;
       tempMapIsSet[id] = kTRUE;
       tempMapVeff[id] = fModulePar->GetEffectiveSpeed();
-      tempMapTSync[id] = fModulePar->GetTimeOffset();
+      tempMapTSync[id] = fModulePar->GetTimeOffset() + fPar->GetGlobalTimeOffset();
       tempMapEGain[id] = fModulePar->GetEnergieGain();
    }
      
@@ -98,13 +102,16 @@ InitStatus R3BNeulandCal2Hit::ReInit() {
 }
 
 void R3BNeulandCal2Hit::Exec (Option_t* option) {
-   if(fVerbose != 0 && ++fNEvent % 100000 == 0)
-      FairLogger::GetLogger()->Info(MESSAGE_ORIGIN, "R3BNeulandCal2Hit::Exec : Event: %8d", fNEvent);
+
+  if(fVerbose != 0 && ++fNEvent % 100000 == 0)
+    //FairLogger::GetLogger()->Info(MESSAGE_ORIGIN, "R3BNeulandCal2Hit::Exec : Event: %8d", fNEvent);
+    LOG(ERROR) << "R3BNeulandCal2Hit::Exec : Event: " << fNEvent << FairLogger::endl;
+
      
    Int_t nLandPmt = fLandPmt->GetEntriesFast();
   
-   R3BNeulandCalData* pmt1;
-   R3BNeulandCalData* pmt2;
+   R3BNeulandCalData* pmt1 = NULL;
+   R3BNeulandCalData* pmt2 = NULL;
    Int_t barId;
    Int_t plane;
    Double_t veff;
@@ -112,8 +119,10 @@ void R3BNeulandCal2Hit::Exec (Option_t* option) {
    Double_t qdcL, qdcR, qdc;
    Double_t x, y, z;
    Int_t id = 0;
-     
-   if (fFirstPlaneHorisontal) {
+
+   Int_t bar_fired[801] = {0};
+   
+   if (fFirstPlaneHorizontal) {
       id = 1;
    }
    for (Int_t i1 = 0; i1 < nLandPmt; i1++) {
@@ -126,25 +135,39 @@ void R3BNeulandCal2Hit::Exec (Option_t* option) {
          continue;
       }
 
+      Int_t skip = 0;
+      
       for (Int_t i2 = 0; i2 < nLandPmt; i2++) {
          if (i1 == i2) {
             continue;
          }
          pmt2 = (R3BNeulandCalData*) fLandPmt->At (i2);
-         if (2 != pmt2->GetSide()) {
-            continue;
-         }
          if (pmt2->GetBarId() != barId) {
             continue;
          }
-
+         if (2 != pmt2->GetSide()) {
+            continue;
+         }
+	 if (skip < bar_fired[barId]) {
+	   skip++;
+	   continue;
+	 }
+	 
+	 bar_fired[barId]++;
+	 
          qdcL = pmt1->GetQdc() * fMapEGain[pmt1->GetBarId() * 2 - 2];
          qdcR = pmt2->GetQdc() * fMapEGain[pmt1->GetBarId() * 2 - 1];
 	 		 
          veff = fMapVeff[(barId-1)*2];
          tdcL = pmt1->GetTime() + fMapTSync[pmt1->GetBarId() * 2 - 2];
          tdcR = pmt2->GetTime() + fMapTSync[pmt2->GetBarId() * 2 - 1];
-         tdc = (tdcL + tdcR) / 2.;
+
+	 //cout << skip << "    " << pmt1->GetBarId() << "    " << fMapTSync[barId * 2 - 2] << endl;
+
+	 if (tdcL - tdcR < -0.5*5.*2048) tdcR = tdcR - 5.*2048; 
+	 if (tdcL - tdcR >  0.5*5.*2048) tdcL = tdcL - 5.*2048; 
+
+	 tdc = (tdcL + tdcR) / 2. - fGlobalTimeOffset;
          qdc = TMath::Sqrt (qdcL * qdcR);
          plane = ((barId - 1) / 50) + 1;
          if (id == plane % 2) {

@@ -73,7 +73,7 @@ InitStatus R3BNeulandGainMatching::Init()
 	    {
 
 	      std::ostringstream oss;
-	      oss << "nl:hv:p" << pln+1 << "b" << bar+1 << "t" << pmt+1;
+	      oss << "r3b:nl:hv:p" << pln+1 << "b" << bar+1 << "t" << pmt+1;
 
 	      auto vmon = oss.str()+":vmon";
 	      auto vtarget = oss.str()+":vtarget.A";
@@ -84,7 +84,7 @@ InitStatus R3BNeulandGainMatching::Init()
 	      entry.vmon = entry.group -> CreateChannel(vmon);
 	      entry.vtarget = entry.group -> CreateChannel(vtarget);
 
-	      //std::cout << "nl:hv:p" << pln+1 << "b" << bar+1 << "t" << pmt+1 << std::endl;
+	      //std::cout << "r3b:nl:hv:p" << pln+1 << "b" << bar+1 << "t" << pmt+1 << std::endl;
 	      entry.group->Fetch();
 	      hv[pln][bar][pmt] = entry.vmon->Get();
 	      //std::cout << entry.vmon->Get() << std::endl;
@@ -241,7 +241,7 @@ void R3BNeulandGainMatching::Exec(Option_t* option)
 		hventry.group->Commit();
 	      }
 	    }
-	    hv_file << "caput nl:hv:p" << iPlane+1 << "b" << iBar+1 << "t" << iSide+1
+	    hv_file << "caput r3b:nl:hv:p" << iPlane+1 << "b" << iBar+1 << "t" << iSide+1
 		    <<":vtargetV.A "<< newhv <<" "<< peakmethod <<" "<< b << std::endl;
 	  }
 	  hv_file.close();

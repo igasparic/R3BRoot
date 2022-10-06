@@ -91,10 +91,10 @@ InitStatus R3BNeulandMapped2Cal::Init()
   
   mgr->Register("NeulandCalData", "Neuland", fPmt, kTRUE);
 
-  htcal1 = new TH2F("htcal1", "htcal1", 700, 0.5, 700.5, 500, -1., 6.);
-  htcal2 = new TH2F("htcal2", "htcal2", 700, 0.5, 700.5, 500, -1., 6.);
-  htcal3 = new TH2F("htcal3", "htcal3", 700, 0.5, 700.5, 500, -1., 6.);
-  htcal4 = new TH2F("htcal4", "htcal4", 700, 0.5, 700.5, 500, -1., 6.);
+  htcal1 = new TH2F("htcal1", "htcal1", 800, 0.5, 800.5, 500, -1., 6.);
+  htcal2 = new TH2F("htcal2", "htcal2", 800, 0.5, 800.5, 500, -1., 6.);
+  htcal3 = new TH2F("htcal3", "htcal3", 800, 0.5, 800.5, 500, -1., 6.);
+  htcal4 = new TH2F("htcal4", "htcal4", 800, 0.5, 800.5, 500, -1., 6.);
   
   return kSUCCESS;
 }
@@ -135,13 +135,13 @@ void R3BNeulandMapped2Cal::Exec(Option_t* option)
             return;
         }
     }
-    else
-    {
-        if (nHits > (fNofPMTs / 2))
-        {
-            return;
-        }
-    }
+    //else
+    //{
+    //    if (nHits > (fNofPMTs / 2))
+    //    {
+    //        return;
+    //    }
+    //}
 
     if(nHits >= fNhitmin)  // ig  0
     {
@@ -168,6 +168,8 @@ void R3BNeulandMapped2Cal::MakeCal()
             continue;
         }
 
+	Double_t qdc=-1.;
+	
         Int_t iPlane = hit->GetPlaneId();
         Int_t iBar = hit->GetBarId();
         Int_t iSide = -1 == hit->fCoarseTime1LE ? 2 : 1;
@@ -225,10 +227,10 @@ void R3BNeulandMapped2Cal::MakeCal()
 
 	if (1 == iSide) {
 	  htcal1->Fill((iPlane-1)*50+iBar, timeLE);
-	  htcal3->Fill((iPlane-1)*50+iBar, timeTE);
+	  htcal2->Fill((iPlane-1)*50+iBar, timeTE);
 	}
 	if (2 == iSide) {
-	  htcal2->Fill((iPlane-1)*50+iBar, timeLE);
+	  htcal3->Fill((iPlane-1)*50+iBar, timeLE);
 	  htcal4->Fill((iPlane-1)*50+iBar, timeTE);
 	}
 
@@ -236,8 +238,22 @@ void R3BNeulandMapped2Cal::MakeCal()
 	timeLE = fClockFreq-timeLE + coarse * fClockFreq;
 	coarse = 1 == iSide ? hit->fCoarseTime1TE : hit->fCoarseTime2TE;
 	timeTE = fClockFreq-timeTE + coarse * fClockFreq;
-	
+
 	if (timeTE-timeLE < 0)
+	  {
+	    qdc = 2048*fClockFreq + timeTE-timeLE;
+	  }
+	else
+	  {
+	    qdc = timeTE-timeLE;
+	  }	    
+
+	if (fWalkEnabled) timeLE = timeLE + WalkCorrection(qdc);
+	
+	new ((*fPmt)[fNPmt]) R3BNeulandCalData((iPlane-1)*50+iBar, iSide, timeLE, qdc);
+	fNPmt += 1;
+
+	/* if (timeTE-timeLE < 0)
 	  {
 	    new ((*fPmt)[fNPmt]) R3BNeulandCalData((iPlane-1)*50+iBar, iSide, timeLE,
 						   2048*fClockFreq + timeTE-timeLE);
@@ -248,13 +264,14 @@ void R3BNeulandMapped2Cal::MakeCal()
 	    new ((*fPmt)[fNPmt]) R3BNeulandCalData((iPlane-1)*50+iBar, iSide, timeLE,
 						   timeTE-timeLE);
 	    fNPmt += 1;
-	  }	    
+	    } */
+	
     }
 }
 
 void R3BNeulandMapped2Cal::FinishEvent()
 {
-    if (fVerbose && 0 == (fNEvents % 1000))
+    if (fVerbose && 0 == (fNEvents % 100000))
     {
         LOG(INFO) << "R3BNeulandMapped2Cal::Exec : event=" << fNEvents << " nPMTs=" << fNPmt << FairLogger::endl;
     }
@@ -276,6 +293,64 @@ void R3BNeulandMapped2Cal::FinishTask()
   htcal3->Write();
   htcal4->Write();
   
+}
+
+Double_t R3BNeulandMapped2Cal::WalkCorrection(Double_t x)
+{
+  Double_t y=0;
+
+  if (x<0.) return y;
+
+  Double_t walkval[34] = {69.5,   // 18
+			  68.0,   // 22
+			  67.6,   // 26
+			  65.6,   // 30
+			  65.0,   // 34
+			  63.8,   // 38
+			  62.9,   // 42
+			  62.5,   // 46
+			  62.1,   // 50
+			  61.8,   // 54
+			  61.5,   // 58
+			  61.0,   // 62
+			  60.85,  // 66
+			  60.7,   // 70
+			  60.55,  // 74
+			  60.4,   // 78
+			  60.3,   // 82  60.25
+			  60.27,  // 86  60.4
+			  60.05,   // 90
+			  60.05,   // 94 60.1
+			  60.0,   // 98
+			  59.8,   // 102
+			  59.7,   // 106
+			  59.6,   // 110
+			  59.6,   // 114
+			  59.55,   // 118
+			  59.4,   // 122
+			  59.4,   // 126
+			  59.3,   // 130
+			  59.25,   // 134
+			  59.05,   // 138
+			  59.0,  // 142  58.95
+			  58.95,
+                          58.91};
+  
+  if (x < 16.) y = 70.5 - x/4.;
+  
+  for (Int_t i=0; i<34; i++) { 
+    
+    if (x>=16.+4.*i&&x<20+4.*i) y=walkval[i];
+    
+  }
+
+  if (x>=152.&&x<160.) y = 58.9 + 0.08/8.*(160.-x);
+  if (x>=160.) y = 58.55 + 0.3/30.*(190.-x);
+  //if (x>=160.&&x<190.) y = 58.7 + 0.4/30.*(190.-x);
+  //if (x>=190.) y = 58.5;
+  
+  return 58.6-y;
+
 }
 
 ClassImp(R3BNeulandMapped2Cal)

@@ -114,6 +114,8 @@ class R3BNeulandCal2HitPar : public FairTask
     TClonesArray* fLandPmt;
     R3BNeulandHitPar* fPar;
 
+    TClonesArray* fMappedLos;
+    
     std::vector<std::vector<bar*> > bars;
     TGraph* x_plot;
     TGraph* y_plot;

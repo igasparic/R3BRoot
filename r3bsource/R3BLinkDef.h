@@ -28,6 +28,7 @@
 #pragma link C++ class R3BStrawtubesReader+;
 #pragma link C++ class R3BStartrackReader+;
 #pragma link C++ class R3BAmsReader+;
+#pragma link C++ class R3BNeulandWRReader+;
 //#pragma link C++ class R3BFib4Reader+;
 
 #pragma link C++ class EXT_STR_h101_unpack_t;
@@ -52,4 +53,5 @@
 #pragma link C++ class EXT_STR_h101_STAR_onion_t;
 #pragma link C++ class EXT_STR_h101_FIBFOUR_onion_t;
 #pragma link C++ class EXT_STR_h101_AMS_onion_t;
+#pragma link C++ class EXT_STR_h101_nn_wr_t;
 #endif

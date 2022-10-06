@@ -31,10 +31,13 @@ class R3BNeulandCal2Hit : public FairTask
 
     virtual void FinishEvent();
     
-    inline void SetFirstPlaneHorisontal() { fFirstPlaneHorisontal = kTRUE; }
+    inline void SetFirstPlaneHorizontal() { fFirstPlaneHorizontal = kTRUE; }
         
     //Distance to target in cm
     inline void SetDistanceToTarget(Double_t d) { fDistanceToTarget = d; }
+
+    //Global time offset in ns
+    inline void SetGlobalTimeOffset(Double_t t0) { fGlobalTimeOffset = t0; }
 
   private:
     void SetParameter();
@@ -44,10 +47,11 @@ class R3BNeulandCal2Hit : public FairTask
     R3BNeulandHitPar* fPar;
     Int_t fNDigi;
     Int_t fNEvent;
-    
+
     std::ifstream* fInFile;
-    Bool_t fFirstPlaneHorisontal;
-    Double_t fDistanceToTarget;
+    Bool_t fFirstPlaneHorizontal;
+    Double_t fDistanceToTarget = 1520.;
+    Double_t fGlobalTimeOffset = 1697.;
     
     std::map<Int_t, Bool_t> fMapIsSet;
     std::map<Int_t, Double_t> fMapVeff;

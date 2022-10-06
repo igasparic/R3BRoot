@@ -131,7 +131,7 @@ class R3BNeulandMapped2Cal : public FairTask
         fNhitmin = nhitmin;
     }
 
-  private:   
+ private:   
     Int_t fNEvents;                             /**< Event counter. */
     Bool_t fPulserMode;                         /**< Running with pulser data. */
     Bool_t fWalkEnabled;                        /**< Enable / Disable walk correction. */
@@ -154,6 +154,8 @@ class R3BNeulandMapped2Cal : public FairTask
 
     void MakeCal();
 
+    Double_t WalkCorrection(Double_t);
+    
     TH2F *htcal1;
     TH2F *htcal2;
     TH2F *htcal3;
